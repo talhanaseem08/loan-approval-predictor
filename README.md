@@ -2,7 +2,7 @@
 
 A Streamlit app that predicts whether a loan application will be **approved** or **not approved** using a machine learning pipeline and Logistic Regression.
 
-**Live app:** [View the app](loan-approval-predictor-ytlt6dny7nvrvmayddlov5.streamlit.app) 
+**Live app:** [View the app](https://loan-approval-predictor-ytlt6dny7nvrvmayddlov5.streamlit.app/) 
 ---
 
 ## What This Project Is About
