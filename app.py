@@ -21,21 +21,65 @@ import seaborn as sns
 # Page config
 st.set_page_config(page_title="Loan Approval Predictor", layout="wide")
 
+# Required columns for the app (must be present in uploaded CSV)
+TARGET = "approved"
+REQUIRED_COLS = [
+    "gender", "age", "city", "employment_type", "bank",
+    "monthly_income_pkr", "credit_score", "loan_amount_pkr",
+    "loan_tenure_months", "existing_loans", "default_history",
+    "has_credit_card", TARGET,
+]
+
+# --- Sidebar: Upload CSV & cache ---
+if "uploaded_df" not in st.session_state:
+    st.session_state.uploaded_df = None
+if "uploaded_filename" not in st.session_state:
+    st.session_state.uploaded_filename = None
+
+with st.sidebar:
+    st.header("📁 Dataset")
+    uploaded_file = st.file_uploader(
+        "Upload a loan CSV",
+        type=["csv"],
+        help="Upload a CSV with the same columns as the default dataset (e.g. approved, gender, age, city, ...). It will be cached for this session.",
+    )
+    if uploaded_file is not None:
+        try:
+            up_df = pd.read_csv(uploaded_file)
+            missing = [c for c in REQUIRED_COLS if c not in up_df.columns]
+            if missing:
+                st.error(f"Missing columns: {', '.join(missing)}. Using default dataset.")
+            elif len(up_df) < 100:
+                st.warning("Dataset has very few rows. Using default dataset.")
+            else:
+                st.session_state.uploaded_df = up_df
+                st.session_state.uploaded_filename = uploaded_file.name
+                st.success(f"Cached: **{uploaded_file.name}** ({len(up_df):,} rows)")
+        except Exception as e:
+            st.error(f"Could not read CSV: {e}. Using default dataset.")
+    if st.button("Use default dataset"):
+        st.session_state.uploaded_df = None
+        st.session_state.uploaded_filename = None
+        st.rerun()
+    if st.session_state.uploaded_filename:
+        st.caption(f"Current: **{st.session_state.uploaded_filename}** (cached)")
+
+# --- Load dataset: cached upload or default file ---
+@st.cache_data
+def load_default_data():
+    import os
+    path = "loan_dataset_cleaned.csv" if os.path.exists("loan_dataset_cleaned.csv") else "loan_dataset.csv"
+    return pd.read_csv(path)
+
+if st.session_state.uploaded_df is not None:
+    df = st.session_state.uploaded_df.copy()
+else:
+    df = load_default_data()
+
 st.title("Loan Approval Predictor")
 st.markdown("ML pipeline with Logistic Regression")
 
-# --- Load dataset (use cleaned CSV if available) ---
-@st.cache_data
-def load_data():
-    import os
-    path = "loan_dataset_cleaned.csv" if os.path.exists("loan_dataset_cleaned.csv") else "loan_dataset.csv"
-    df = pd.read_csv(path)
-    return df
-
-df = load_data()
-
 # Feature columns (exclude target and any ID column like applicant_name)
-TARGET = "approved"
 feature_cols = [c for c in df.columns if c != TARGET and c != "applicant_name"]
 
 NUMERIC_FEATURES = [
